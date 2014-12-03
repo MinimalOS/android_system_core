@@ -32,11 +32,12 @@
 #include <sys/epoll.h>
 #include <sys/timerfd.h>
 #include <utils/Errors.h>
+#include <getopt.h>
 
 using namespace android;
 
 // Periodic chores intervals in seconds
-#define DEFAULT_PERIODIC_CHORES_INTERVAL_FAST (60 * 1)
+#define DEFAULT_PERIODIC_CHORES_INTERVAL_FAST (60 * 10)
 #define DEFAULT_PERIODIC_CHORES_INTERVAL_SLOW (60 * 10)
 
 static struct healthd_config healthd_config = {
@@ -89,6 +90,13 @@ extern int healthd_mode_charger_preparetowait(void);
 extern void healthd_mode_charger_heartbeat(void);
 extern void healthd_mode_charger_battery_update(
     struct android::BatteryProperties *props);
+
+static const struct option OPTIONS[] = {
+    { "mode", required_argument, NULL, 'm' },
+    { NULL, 0, NULL, 0 },
+};
+
+int mode = NORMAL;
 
 // NOPs for modes that need no special action
 
@@ -332,6 +340,18 @@ int main(int argc, char **argv) {
 
     if (!strcmp(basename(argv[0]), "charger")) {
         healthd_mode_ops = &charger_ops;
+        int arg;
+        while ((arg=getopt_long(argc, argv,"m:" , OPTIONS, NULL))!=-1) {
+            switch (arg) {
+                case 'm':
+                    mode = atoi(optarg);
+                    break;
+                case '?':
+                default:
+                    KLOG_ERROR(LOG_TAG, "Unrecognized charger option\n");
+                    continue;
+            }
+        }
     } else {
         while ((ch = getopt(argc, argv, "cr")) != -1) {
             switch (ch) {
@@ -355,6 +375,9 @@ int main(int argc, char **argv) {
         KLOG_ERROR("Initialization failed, exiting\n");
         exit(2);
     }
+
+    periodic_chores();
+    healthd_mode_ops->heartbeat();
 
     healthd_mainloop();
     KLOG_ERROR("Main loop terminated, exiting\n");
