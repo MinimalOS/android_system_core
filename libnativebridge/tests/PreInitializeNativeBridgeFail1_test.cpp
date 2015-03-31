@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 The Android Open Source Project
+ * Copyright (C) 2014 The Android Open Source Project
  *
  * Licensed under the Apache License, Version 2.0 (the "License");
  * you may not use this file except in compliance with the License.
@@ -14,18 +14,25 @@
  * limitations under the License.
  */
 
-#include <healthd.h>
-#include "healthd_msm.h"
+#include "NativeBridgeTest.h"
 
-void healthd_board_init(struct healthd_config*)
-{
-    // use defaults
-    power_off_alarm_init();
+#include <cstdio>
+#include <cstring>
+#include <cutils/log.h>
+#include <dlfcn.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <stdio.h>
+#include <sys/mount.h>
+#include <sys/stat.h>
+
+namespace android {
+
+TEST_F(NativeBridgeTest, PreInitializeNativeBridgeFail1) {
+  // Needs a valid application directory.
+  ASSERT_TRUE(LoadNativeBridge(kNativeBridgeLibrary, nullptr));
+  ASSERT_FALSE(PreInitializeNativeBridge(nullptr, "isa"));
+  ASSERT_TRUE(NativeBridgeError());
 }
 
-
-int healthd_board_battery_update(struct android::BatteryProperties*)
-{
-    // return 0 to log periodic polled battery status to kernel log
-    return 1;
-}
+}  // namespace android
